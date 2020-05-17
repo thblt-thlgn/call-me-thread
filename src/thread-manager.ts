@@ -4,8 +4,10 @@ import * as path from 'path';
 import { deleteFolderRecursive, generateUUID } from './utils';
 import Thread from './thread';
 
-type ProcessorData = string | number | boolean | Record<any, any> | any[];
-type Processor = (data: ProcessorData) => Promise<ProcessorData>;
+export type ProcessorData = string | number | boolean | Record<any, any> | any[];
+export type Processor<Input extends ProcessorData, Output extends ProcessorData> = (
+  data: Input,
+) => Promise<Output>;
 const STOP = '__STOP__';
 
 const THREAD_FOLDER_PATH = path.join(__dirname, '__threads');
@@ -25,9 +27,9 @@ export class ThreadManager {
     return filePath;
   }
 
-  create(
-    processor: Processor,
-    onData: (data: ProcessorData) => void,
+  create<Input extends ProcessorData = ProcessorData, Output extends ProcessorData = ProcessorData>(
+    processor: Processor<Input, Output>,
+    onData: (data: Input) => void,
     onError: (err: Error) => void,
   ): Thread {
     const id = generateUUID();
@@ -67,12 +69,15 @@ export class ThreadManager {
     return this.#threads.has(id) ? 'alive' : 'dead';
   }
 
-  runInThread(processor: Processor, data: ProcessorData): Promise<ProcessorData> {
-    let response: ProcessorData;
+  runInThread<
+    Input extends ProcessorData = ProcessorData,
+    Output extends ProcessorData = ProcessorData
+  >(processor: Processor<Input, Output>, data: Input): Promise<Output> {
+    let response: Output;
     const id = generateUUID();
     const filePath = this.createThreadFile(id, processor);
     const worker = new Worker(filePath);
-    const onProcess = (data: ProcessorData): void => {
+    const onProcess = (data: Output): void => {
       response = data;
       worker.postMessage(STOP);
     };
