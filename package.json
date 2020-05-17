@@ -1,0 +1,44 @@
+{
+  "name": "@thblt-thlgn/call-me-thread",
+  "description": "Typescript thread like implementation",
+  "version": "0.0.1",
+  "author": "Thibault Théologien <thibault.theologien@hotmail.fr>",
+  "license": "The unlicense",
+  "main": "dist/index.js",
+  "types": "types/index.d.ts",
+  "private": false,
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint",
+    "test": "mocha -r ts-node/register __test__/**/*.test.ts"
+  },
+  "dependencies": {
+    "typescript": "^3.9.2"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.11",
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^14.0.1",
+    "@typescript-eslint/eslint-plugin": "^2.33.0",
+    "@typescript-eslint/parser": "^2.33.0",
+    "chai": "^4.2.0",
+    "eslint": "^7.0.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-prettier": "^3.1.3",
+    "mocha": "^7.1.2",
+    "prettier": "^2.0.5",
+    "ts-node": "^8.10.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thblt-thlgn/call-me-thread.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thblt-thlgn/call-me-thread/issues"
+  },
+  "homepage": "https://github.com/thblt-thlgn/call-me-thread#readme",
+  "keywords": [
+    "nodejs",
+    "typescript"
+  ]
+}
