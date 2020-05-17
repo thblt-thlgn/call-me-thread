@@ -1,8 +1,13 @@
-import { Worker, isMainThread } from 'worker_threads';
+import { Worker } from 'worker_threads';
 import * as fs from 'fs';
 import * as path from 'path';
 import { deleteFolderRecursive, generateUUID } from './utils';
 import Thread from './thread';
+
+type Processor = (...params: any[]) => Promise<any>;
+type ProcessorData = any;
+type ProcessorReponse = any;
+const STOP = '__STOP__';
 
 const THREAD_FOLDER_PATH = path.join(__dirname, '__threads');
 const BASE_THREAD = fs.readFileSync(path.join(__dirname, '_worker.js')).toString();
@@ -21,7 +26,7 @@ export class ThreadManager {
     return filePath;
   }
 
-  start(processor: (...params: any[]) => Promise<any>, onProcess: Function): Thread {
+  create(processor: Processor, onProcess: Function): Thread {
     const id = generateUUID();
     const filePath = this.createThreadFile(id, processor);
     const worker = new Worker(filePath);
@@ -58,11 +63,37 @@ export class ThreadManager {
       throw new Error(`No thread found with ${threadId} id`);
     }
 
-    worker.postMessage('__STOP__');
+    worker.postMessage(STOP);
   }
 
   getStatus(id: string): 'alive' | 'dead' {
     return this.#threads.has(id) ? 'alive' : 'dead';
+  }
+
+  runInThread(processor: Processor, data: ProcessorData): Promise<ProcessorReponse> {
+    let response: ProcessorReponse;
+    const id = generateUUID();
+    const filePath = this.createThreadFile(id, processor);
+    const worker = new Worker(filePath);
+    const onProcess = (data: ProcessorReponse): void => {
+      response = data;
+      worker.postMessage(STOP);
+    };
+    this.#threads.set(id, worker);
+
+    return new Promise((resolve, reject) => {
+      worker.on('message', onProcess);
+
+      worker.on('error', reject);
+
+      worker.on('exit', () => {
+        this.#threads.delete(id);
+        fs.unlinkSync(filePath);
+        resolve(response);
+      });
+
+      worker.postMessage(data);
+    });
   }
 }
 
