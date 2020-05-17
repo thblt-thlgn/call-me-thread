@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { deleteFolderRecursive } from './utils';
 import Thread from './thread';
 import { THREAD_FOLDER_PATH } from './environment';
-import { ProcessorData, Processor, ThreadNotFoundError, ThreadStatus } from './types';
+import { ProcessorData, Processor, ThreadNotFoundError, ThreadStatus } from './typing';
 
 export class ThreadManager {
   #threads = new Map<string, Thread>();

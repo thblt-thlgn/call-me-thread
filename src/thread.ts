@@ -3,7 +3,7 @@ import * as path from 'path';
 import { Worker } from 'worker_threads';
 import { generateUUID } from './utils';
 import { THREAD_FOLDER_PATH, BASE_THREAD, STOP_MESSAGE } from './environment';
-import { ThreadStatus, Processor, ProcessorData } from './types';
+import { ThreadStatus, Processor, ProcessorData } from './typing';
 
 export default class Thread<
   Input extends ProcessorData = ProcessorData,
