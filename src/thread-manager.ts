@@ -2,9 +2,10 @@ import { Worker, isMainThread } from 'worker_threads';
 import * as fs from 'fs';
 import * as path from 'path';
 import { deleteFolderRecursive, generateUUID } from './utils';
+import Thread from './thread';
 
 const THREAD_FOLDER_PATH = path.join(__dirname, '__threads');
-const BASE_THREAD = fs.readFileSync(path.join(__dirname, 'base-thread.js')).toString();
+const BASE_THREAD = fs.readFileSync(path.join(__dirname, '_worker.js')).toString();
 export class ThreadManager {
   #threads = new Map<string, Worker>();
 
@@ -20,7 +21,7 @@ export class ThreadManager {
     return filePath;
   }
 
-  start(processor: (...params: any[]) => Promise<any>, onProcess: Function): string {
+  start(processor: (...params: any[]) => Promise<any>, onProcess: Function): Thread {
     const id = generateUUID();
     const filePath = this.createThreadFile(id, processor);
     const worker = new Worker(filePath);
@@ -39,7 +40,7 @@ export class ThreadManager {
       fs.unlinkSync(filePath);
     });
 
-    return id;
+    return new Thread(this, id);
   }
 
   pushData(threadId: string, data: any): void {
@@ -58,6 +59,10 @@ export class ThreadManager {
     }
 
     worker.postMessage('__STOP__');
+  }
+
+  getStatus(id: string): 'alive' | 'dead' {
+    return this.#threads.has(id) ? 'alive' : 'dead';
   }
 }
 
