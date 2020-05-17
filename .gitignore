@@ -50,5 +50,5 @@ coverage
 # GENERATED
 # ------------------
 dist
-./types
+types
 __threads
