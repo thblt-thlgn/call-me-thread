@@ -4,9 +4,8 @@ import * as path from 'path';
 import { deleteFolderRecursive, generateUUID } from './utils';
 import Thread from './thread';
 
-type Processor = (...params: any[]) => Promise<any>;
-type ProcessorData = any;
-type ProcessorReponse = any;
+type ProcessorData = string | number | boolean | Record<any, any> | any[];
+type Processor = (data: ProcessorData) => Promise<ProcessorData>;
 const STOP = '__STOP__';
 
 const THREAD_FOLDER_PATH = path.join(__dirname, '__threads');
@@ -26,20 +25,18 @@ export class ThreadManager {
     return filePath;
   }
 
-  create(processor: Processor, onProcess: Function): Thread {
+  create(
+    processor: Processor,
+    onData: (data: ProcessorData) => void,
+    onError: (err: Error) => void,
+  ): Thread {
     const id = generateUUID();
     const filePath = this.createThreadFile(id, processor);
     const worker = new Worker(filePath);
     this.#threads.set(id, worker);
 
-    worker.on('message', (output: any) => {
-      onProcess(output);
-    });
-
-    worker.on('error', (err: Error) => {
-      onProcess(err);
-    });
-
+    worker.on('message', onData);
+    worker.on('error', onError);
     worker.on('exit', () => {
       this.#threads.delete(id);
       fs.unlinkSync(filePath);
@@ -70,12 +67,12 @@ export class ThreadManager {
     return this.#threads.has(id) ? 'alive' : 'dead';
   }
 
-  runInThread(processor: Processor, data: ProcessorData): Promise<ProcessorReponse> {
-    let response: ProcessorReponse;
+  runInThread(processor: Processor, data: ProcessorData): Promise<ProcessorData> {
+    let response: ProcessorData;
     const id = generateUUID();
     const filePath = this.createThreadFile(id, processor);
     const worker = new Worker(filePath);
-    const onProcess = (data: ProcessorReponse): void => {
+    const onProcess = (data: ProcessorData): void => {
       response = data;
       worker.postMessage(STOP);
     };
@@ -83,15 +80,12 @@ export class ThreadManager {
 
     return new Promise((resolve, reject) => {
       worker.on('message', onProcess);
-
       worker.on('error', reject);
-
       worker.on('exit', () => {
         this.#threads.delete(id);
         fs.unlinkSync(filePath);
         resolve(response);
       });
-
       worker.postMessage(data);
     });
   }

@@ -1,4 +1,4 @@
-const { isMainThread, parentPort, threadId } = require('worker_threads');
+const { isMainThread, parentPort } = require('worker_threads');
 
 if (isMainThread) {
   throw new Error('Cannot be called as a script');
@@ -12,14 +12,8 @@ parentPort.on('message', async (value) => {
   }
   try {
     const result = await processor(value);
-    parentPort.postMessage({
-      ...result,
-      threadId,
-    });
+    parentPort.postMessage(result);
   } catch (e) {
-    parentPort.postMessage({
-      error: e,
-      threadId,
-    });
+    parentPort.postMessage(e);
   }
 });
