@@ -4,7 +4,7 @@ import * as path from 'path';
 import { deleteFolderRecursive, generateUUID } from './utils';
 
 const THREAD_FOLDER_PATH = path.join(__dirname, '__threads');
-
+const BASE_THREAD = fs.readFileSync(path.join(__dirname, 'base-thread.js')).toString();
 export class ThreadManager {
   #threads = new Map<string, Worker>();
 
@@ -15,55 +15,49 @@ export class ThreadManager {
 
   private createThreadFile(id: string, func: Function): string {
     const filePath = path.join(THREAD_FOLDER_PATH, `${id}.js`);
-    fs.writeFileSync(
-      filePath,
-      `
-const { isMainThread, parentPort, threadId } = require('worker_threads');
 
-if (isMainThread) {
-  throw new Error('Cannot be called as a script');
-}
-
-const processor = ${func.toString()};
-
-parentPort.on('message', async (value) => {
-  try {
-    const result = await processor(value);
-    parentPort.postMessage({
-      ...result,
-      threadId,
-    });
-  } catch (e) {
-    parentPort.postMessage({
-      error: e,
-      threadId,
-    });
-  }
-});
-    `,
-    );
+    fs.writeFileSync(filePath, BASE_THREAD.replace('$func', func.toString()));
     return filePath;
   }
 
-  add(func: (toProcess: any) => Promise<any>, params: any): void {
+  start(processor: (...params: any[]) => Promise<any>, onProcess: Function): string {
     const id = generateUUID();
-    const filePath = this.createThreadFile(id, func);
+    const filePath = this.createThreadFile(id, processor);
     const worker = new Worker(filePath);
     this.#threads.set(id, worker);
 
     worker.on('message', (output: any) => {
-      console.log(output);
+      onProcess(output);
     });
 
     worker.on('error', (err: Error) => {
-      console.log(err);
+      onProcess(err);
     });
 
     worker.on('exit', () => {
-      console.log('exit');
+      this.#threads.delete(id);
+      fs.unlinkSync(filePath);
     });
 
-    worker.postMessage(params);
+    return id;
+  }
+
+  pushData(threadId: string, data: any): void {
+    const worker = this.#threads.get(threadId);
+    if (!worker) {
+      throw new Error(`No thread found with ${threadId} id`);
+    }
+
+    worker.postMessage(data);
+  }
+
+  stop(threadId: string): void {
+    const worker = this.#threads.get(threadId);
+    if (!worker) {
+      throw new Error(`No thread found with ${threadId} id`);
+    }
+
+    worker.postMessage('__STOP__');
   }
 }
 

@@ -7,6 +7,9 @@ if (isMainThread) {
 const processor = $func;
 
 parentPort.on('message', async (value) => {
+  if (value === '__STOP__') {
+    process.exit();
+  }
   try {
     const result = await processor(value);
     parentPort.postMessage({
