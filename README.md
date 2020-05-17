@@ -1,9 +1,9 @@
-# OMDb Typescript SDK
+# CallMeThread
 
-![](https://github.com/thblt-thlgn/omdb/workflows/Run%20tests/badge.svg)
-[![npm version](https://badge.fury.io/js/%40thblt-thlgn%2Fomdb.svg)](https://badge.fury.io/js/%40thblt-thlgn%2Fomdb)
+![](https://github.com/thblt-thlgn/call-me-thread/workflows/Run%20tests/badge.svg)
+[![npm version](https://badge.fury.io/js/%40thblt-thlgn%2Fcall-me-thread.svg)](https://badge.fury.io/js/%40thblt-thlgn%2Fomdb)
 
-Lightweight non official [OMDb](http://www.omdbapi.com/) (Movie database) Typescript SDK
+A simple thread implementation using node workers
 
 _Contributions are more than welcome_
 
@@ -11,41 +11,43 @@ _Contributions are more than welcome_
 
 ```sh
 # Using npm
-$ npm install @thblt-thlgn/omdb
+$ npm install @thblt-thlgn/call-me-thread
 
 # Or using yarn
-$ yarn add @thblt-thlgn/omdb
+$ yarn add @thblt-thlgn/call-me-thread
 ```
 
 ## How to use ?
 
 ```ts
-// Import in TypeScript
-import OMDb from '@thblt-thlgn/omdb';
+import ThreadManager from '@thblt-thlgn/call-me-thread';
+const tm = new ThreadManager();
 
-// Import in JavaScript
-const { OMDb } = require('@thblt-thlgn/omdb');
+// Create a new thread
+const sumFunction = (params: { a: number; b: number }): number => params.a + params.b;
 
-// Create a new instance
-const client = new OMDb('my_api_key'); // Check out http://www.omdbapi.com/apikey.aspx
-
-// Search a movie
-client.search('Onward')
-  .then(console.log)
+tm.create(sumFunction)
+  .subscribe(console.log)
   .catch(console.error);
 
-// Get a movie by its title
-client.getByTitle('Shrek')
-  .then(console.log)
-  .catch(console.error);
+// Send data to the thread
+tm.pushData({ a: 1, b: 2 })
+  .pushData({ a: 4, b: 5 });
 
-// Get a movie by its IMDb ID
-client.getById('tt2575988')
+// Stop the thread
+tm.stop();
+
+// Run as a single call
+tm.runInThread(sumFunction, { a: 132, b: 42 })
   .then(console.log)
   .catch(console.error);
 ```
 
 ## Run tests
+
 ```sh
 $ env API_KEY=my_api_key yarn test
 ```
+
+## Limitations
+You cannot use data from outside the processor function scope
