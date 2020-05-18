@@ -43,6 +43,8 @@ tm.runInThread(sumFunction, { a: 132, b: 42 })
   .catch(console.error);
 ```
 
+__NOTE:__ You can path data and libraries to import using the optionnal parameter on thread creation.
+
 ## Run tests
 
 ```sh

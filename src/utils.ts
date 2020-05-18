@@ -22,6 +22,7 @@ export const generateUUID = (): string =>
 export const toCamelCase = (str: string): string =>
   str
     .replace('_', '-')
+    .replace('/', '-')
     .split('-')
     .map((cursor, index) =>
       index === 0
