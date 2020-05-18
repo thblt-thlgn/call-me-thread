@@ -1,4 +1,6 @@
+import { Library } from './library';
+
 export interface WorkerOptions {
   workerData?: any;
-  libraries?: string[];
+  libraries?: Library[];
 }

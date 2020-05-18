@@ -3,7 +3,7 @@ import * as path from 'path';
 import { Worker } from 'worker_threads';
 import { generateUUID, generateImports, generateLibraries } from './utils';
 import { THREAD_FOLDER_PATH, BASE_THREAD, STOP_MESSAGE } from './environment';
-import { ThreadStatus, Processor, ProcessorData, WorkerOptions } from './typing';
+import { ThreadStatus, Processor, ProcessorData, WorkerOptions, Library } from './typing';
 
 export default class Thread<
   Input extends ProcessorData = ProcessorData,
@@ -30,7 +30,7 @@ export default class Thread<
     });
   }
 
-  private createThreadFile(processor: Processor, libraries?: string[]): string {
+  private createThreadFile(processor: Processor, libraries?: Library[]): string {
     const filePath = path.join(THREAD_FOLDER_PATH, `${this.id}.js`);
 
     let content = BASE_THREAD.replace('$func', processor.toString());

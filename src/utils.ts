@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { Library } from './typing';
 
 export const deleteFolderRecursive = (folderPath: string): void => {
   if (fs.existsSync(folderPath)) {
@@ -31,8 +32,13 @@ export const toCamelCase = (str: string): string =>
     )
     .join('');
 
-export const generateImports = (libraries: string[]): string =>
-  libraries.map((lib) => `const ${toCamelCase(lib)} = require('${lib}');`).join('\n');
+export const generateImports = (libraries: Library[]): string =>
+  libraries
+    .map((lib) => {
+      const constName = lib.constName || toCamelCase(lib.name);
+      return `const ${constName} = require('${lib.name}');`;
+    })
+    .join('\n');
 
-export const generateLibraries = (libraries: string[]): string =>
-  `{ ${libraries.map(toCamelCase).join(', ')} }`;
+export const generateLibraries = (libraries: Library[]): string =>
+  `{ ${libraries.map((lib) => lib.constName || toCamelCase(lib.name)).join(', ')} }`;
