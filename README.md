@@ -1,7 +1,7 @@
 # CallMeThread
 
 ![](https://github.com/thblt-thlgn/call-me-thread/workflows/Run%20tests/badge.svg)
-[![npm version](https://badge.fury.io/js/%40thblt-thlgn%2Fcall-me-thread.svg)](https://badge.fury.io/js/%40thblt-thlgn%2Fomdb)
+[![npm version](https://badge.fury.io/js/%40thblt-thlgn%2Fcall-me-thread.svg)](https://badge.fury.io/js/%40thblt-thlgn%2Fcall-me-thread)
 
 A simple thread implementation using node workers
 
@@ -144,7 +144,7 @@ creationPool
   });
 ```
 
-On my laptop, it the result is `Time: 53.751s` with a pool of 8 threads, whereas a pool of 1 thread is `Time: 1:15.745 (m:ss.mmm)`
+On my laptop, the result is `Time: 53.751s` with a pool of 8 threads, whereas a pool of 1 thread is `Time: 1:15.745 (m:ss.mmm)`
 
 ## Limitations
 You cannot use data from outside the processor function scope
