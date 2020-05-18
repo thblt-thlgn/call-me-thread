@@ -103,5 +103,48 @@ __NOTE:__ You can pass data and libraries to import using the optionnal paramete
 $ env yarn test
 ```
 
+## Example
+```js
+const { ThreadManager } = require('@thblt-thlgn/call-me-thread');
+const ARRAY_SIZE = 10000000;
+const THREADS = 4;
+
+const createArrays = ({ size, maxValue }) =>
+  Array.from(new Array(size)).map(() => Math.round(Math.random() * maxValue));
+
+const sorter = ({ array }) => {
+  return array.sort((a, b) => a - b);
+};
+
+const tm = new ThreadManager();
+const arrays = [];
+const creationPool = tm
+  .createPool(createArrays, THREADS)
+  .subscribe((array) => {
+    arrays.push(array);
+  })
+  .catch(console.error);
+const sortingPool = tm.createPool(sorter, THREADS).catch(console.error);
+
+console.time('Time');
+creationPool
+  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
+  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
+  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
+  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
+  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
+  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
+  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
+  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
+  .stop(() => {
+    arrays.forEach((array) => {
+      sortingPool.pushData({ array });
+    });
+    sortingPool.stop(() => console.timeEnd('Time'));
+  });
+```
+
+On my laptop, it the result is `Time: 53.751s` with a pool of 8 threads, whereas a pool of 1 thread is `Time: 1:15.745 (m:ss.mmm)`
+
 ## Limitations
 You cannot use data from outside the processor function scope

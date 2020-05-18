@@ -31,7 +31,7 @@ export class Thread<
       this.#activeProcessingDataCount -= 1;
       this.status = this.#activeProcessingDataCount === 0 ? 'waiting' : 'running';
 
-      if (this.status === 'waiting' && this.#isStopTriggered) {
+      if (this.#activeProcessingDataCount === 0 && this.#isStopTriggered) {
         this.#worker?.postMessage(STOP_MESSAGE);
       }
     });
@@ -72,7 +72,7 @@ export class Thread<
       });
     }
 
-    if (force) {
+    if (force || this.#activeProcessingDataCount === 0) {
       this.#worker?.postMessage(STOP_MESSAGE);
     } else {
       this.#isStopTriggered = true;
