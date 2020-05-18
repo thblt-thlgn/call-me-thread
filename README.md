@@ -27,16 +27,16 @@ const tm = new ThreadManager();
 const sumFunction = (params: { a: number; b: number }): number => 
   params.a + params.b;
 
-tm.createThread(sumFunction)
+const thread = tm.createThread(sumFunction)
   .subscribe(console.log)
   .catch(console.error);
 
 // Send data to the thread
-tm.pushData({ a: 1, b: 2 })
+thread.pushData({ a: 1, b: 2 })
   .pushData({ a: 4, b: 5 });
 
 // Stop the thread
-tm.stop(() => {
+thread.stop(() => {
   console.log('I will be called when all the data will be processed');
 });
 
@@ -82,7 +82,7 @@ tm.runInThread(libraryImport, {}, { libraries })
   .then(console.log);
 
 // Create a pool
-tm.createPool(sum, 4)
+tm.createPool(sumFunction, 4)
   .subscribe(console.log)
   .catch(console.error)
   .pushData({ a: 1, b: 2 })
@@ -95,15 +95,14 @@ tm.createPool(sum, 4)
   });
 ```
 
-__NOTE:__ You can pass data and libraries to import using the optionnal parameter on thread creation.
-
 ## Run tests
 
 ```sh
-$ env yarn test
+$ yarn test
 ```
 
 ## Example
+
 ```js
 const { ThreadManager } = require('@thblt-thlgn/call-me-thread');
 const ARRAY_SIZE = 10000000;
