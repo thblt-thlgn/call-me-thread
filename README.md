@@ -85,7 +85,7 @@ __NOTE:__ You can pass data and libraries to import using the optionnal paramete
 ## Run tests
 
 ```sh
-$ env API_KEY=my_api_key yarn test
+$ env yarn test
 ```
 
 ## Limitations
