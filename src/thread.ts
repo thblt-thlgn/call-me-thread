@@ -5,13 +5,15 @@ import { generateUUID, generateImports, generateLibraries } from './utils';
 import { THREAD_FOLDER_PATH, BASE_THREAD, STOP_MESSAGE } from './environment';
 import { ThreadStatus, Processor, ProcessorData, WorkerOptions, Library } from './typing';
 
-export default class Thread<
+export class Thread<
   Input extends ProcessorData = ProcessorData,
   Output extends ProcessorData = ProcessorData
 > {
   id = generateUUID();
-  status: ThreadStatus = 'instanciation';
+  status: ThreadStatus = 'initialization';
   #worker: Worker | null = null;
+  #activeProcessingDataCount = 0;
+  #isStopTriggered = false;
 
   constructor(processor: Processor<Input, Output>, opts?: WorkerOptions) {
     const filePath = this.createThreadFile(processor, opts?.libraries);
@@ -25,8 +27,17 @@ export default class Thread<
       this.status = 'stopped';
     });
 
+    this.#worker.on('message', () => {
+      this.#activeProcessingDataCount -= 1;
+      this.status = this.#activeProcessingDataCount === 0 ? 'waiting' : 'running';
+
+      if (this.status === 'waiting' && this.#isStopTriggered) {
+        this.#worker?.postMessage(STOP_MESSAGE);
+      }
+    });
+
     this.#worker.on('online', () => {
-      this.status = 'running';
+      this.status = 'waiting';
     });
   }
 
@@ -54,20 +65,27 @@ export default class Thread<
     return this;
   }
 
-  onStop(func: Function): Thread {
-    this.#worker?.on('exit', () => {
-      func();
-    });
-    return this;
-  }
+  stop(func?: Function, force = false): Thread {
+    if (func) {
+      this.#worker?.on('exit', () => {
+        func();
+      });
+    }
 
-  stop(): Thread {
-    this.#worker?.postMessage(STOP_MESSAGE);
+    if (force) {
+      this.#worker?.postMessage(STOP_MESSAGE);
+    } else {
+      this.#isStopTriggered = true;
+    }
     return this;
   }
 
   pushData(data: Input): Thread {
     this.#worker?.postMessage(data);
+    this.#activeProcessingDataCount += 1;
+    this.status = this.#activeProcessingDataCount === 0 ? 'waiting' : 'running';
     return this;
   }
 }
+
+export default Thread;

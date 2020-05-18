@@ -1,1 +1,1 @@
-export type ThreadStatus = 'running' | 'stopped' | 'instanciation';
+export type ThreadStatus = 'waiting' | 'running' | 'stopped' | 'initialization';

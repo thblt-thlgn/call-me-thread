@@ -27,7 +27,7 @@ const tm = new ThreadManager();
 const sumFunction = (params: { a: number; b: number }): number => 
   params.a + params.b;
 
-tm.create(sumFunction)
+tm.createThread(sumFunction)
   .subscribe(console.log)
   .catch(console.error);
 
@@ -36,7 +36,9 @@ tm.pushData({ a: 1, b: 2 })
   .pushData({ a: 4, b: 5 });
 
 // Stop the thread
-tm.stop();
+tm.stop(() => {
+  console.log('I will be called when all the data will be processed');
+});
 
 // Run as a single call
 tm.runInThread(sumFunction, { a: 132, b: 42 })
@@ -51,7 +53,7 @@ const counter = (params, workerData) => {
   workerData.callCounter += 1;
   return `Thread has been called ${workerData.callCounter} times`;
 };
-tm.create(counter, { workerData })
+tm.createThread(counter, { workerData })
   .subscribe(console.log)
   .pushData({})
   .pushData({})
@@ -78,6 +80,19 @@ const libraryImport = (params, workerData, libraries) => {
 };
 tm.runInThread(libraryImport, {}, { libraries })
   .then(console.log);
+
+// Create a pool
+tm.createPool(sum, 4)
+  .subscribe(console.log)
+  .catch(console.error)
+  .pushData({ a: 1, b: 2 })
+  .pushData({ a: 43, b: 3 })
+  .pushData({ a: 123, b: 242 })
+  .pushData({ a: 32, b: 23 })
+  .pushData({ a: 11, b: 20 })
+  .stop(() => {
+    console.log('Completed')
+  });
 ```
 
 __NOTE:__ You can pass data and libraries to import using the optionnal parameter on thread creation.

@@ -1,9 +1,9 @@
 {
   "name": "@thblt-thlgn/call-me-thread",
   "description": "Typescript thread like implementation",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "Thibault Théologien <thibault.theologien@hotmail.fr>",
-  "license": "UNLICENSE",
+  "license": "UNLICENSED",
   "main": "dist/index.js",
   "types": "types/index.d.ts",
   "private": false,

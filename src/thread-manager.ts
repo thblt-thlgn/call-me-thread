@@ -9,6 +9,7 @@ import {
   ThreadStatus,
   WorkerOptions,
 } from './typing';
+import Pool from './pool';
 
 export class ThreadManager {
   #threads = new Map<string, Thread>();
@@ -18,13 +19,25 @@ export class ThreadManager {
     fs.mkdirSync(THREAD_FOLDER_PATH);
   }
 
-  create<
+  createThread<
     Input extends ProcessorData = ProcessorData,
     Output extends ProcessorData = ProcessorData
   >(processor: Processor<Input, Output>, workerOpts?: WorkerOptions): Thread {
     const thread = new Thread<Input, Output>(processor, workerOpts);
     this.#threads.set(thread.id, thread);
     return thread;
+  }
+
+  createPool<
+    Input extends ProcessorData = ProcessorData,
+    Output extends ProcessorData = ProcessorData
+  >(processor: Processor<Input, Output>, size: number, workerOpts?: WorkerOptions): Pool {
+    const pool = new Pool<Input, Output>(processor, size, workerOpts);
+    Array.from(pool.threads).forEach((thread) => {
+      this.#threads.set(thread.id, thread);
+    });
+
+    return pool;
   }
 
   find(threadId: string): Thread {
@@ -41,9 +54,9 @@ export class ThreadManager {
     thread.pushData(data);
   }
 
-  stop(threadId: string): void {
+  stop(threadId: string, func?: Function, force?: boolean): void {
     const thread = this.find(threadId);
-    thread.stop();
+    thread.stop(func, force);
   }
 
   getStatus(threadId: string): ThreadStatus {
@@ -60,10 +73,9 @@ export class ThreadManager {
     workerOpts?: WorkerOptions,
   ): Promise<Output> {
     let response: Output;
-    const thread = this.create(processor, workerOpts);
+    const thread = this.createThread(processor, workerOpts);
     const onProcess = (data: Output): void => {
       response = data;
-      thread.stop();
     };
 
     return new Promise((resolve, reject) => {
@@ -71,7 +83,7 @@ export class ThreadManager {
         .subscribe(onProcess)
         .catch(reject)
         .pushData(data)
-        .onStop(() => {
+        .stop(() => {
           resolve(response);
         });
     });
