@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Worker } from 'worker_threads';
-import { generateUUID } from './utils';
+import { generateUUID, generateImports, generateLibraries } from './utils';
 import { THREAD_FOLDER_PATH, BASE_THREAD, STOP_MESSAGE } from './environment';
-import { ThreadStatus, Processor, ProcessorData } from './typing';
+import { ThreadStatus, Processor, ProcessorData, WorkerOptions } from './typing';
 
 export default class Thread<
   Input extends ProcessorData = ProcessorData,
@@ -13,10 +13,11 @@ export default class Thread<
   status: ThreadStatus = 'instanciation';
   #worker: Worker | null = null;
 
-  constructor(processor: Processor<Input, Output>) {
-    this.createThreadFile(processor);
-    const filePath = this.createThreadFile(processor);
-    this.#worker = new Worker(filePath);
+  constructor(processor: Processor<Input, Output>, opts?: WorkerOptions) {
+    const filePath = this.createThreadFile(processor, opts?.libraries);
+    this.#worker = new Worker(filePath, {
+      workerData: opts?.workerData,
+    });
 
     this.#worker.on('exit', () => {
       fs.unlinkSync(filePath);
@@ -29,10 +30,17 @@ export default class Thread<
     });
   }
 
-  private createThreadFile(processor: Processor): string {
+  private createThreadFile(processor: Processor, libraries?: string[]): string {
     const filePath = path.join(THREAD_FOLDER_PATH, `${this.id}.js`);
 
-    fs.writeFileSync(filePath, BASE_THREAD.replace('$func', processor.toString()));
+    let content = BASE_THREAD.replace('$func', processor.toString());
+    if (libraries) {
+      content = `${generateImports(libraries)}\n${content}`;
+      content = content.replace('$libraries', generateLibraries(libraries));
+    } else {
+      content = content.replace('$libraries', '{}');
+    }
+    fs.writeFileSync(filePath, content);
     return filePath;
   }
 

@@ -2,7 +2,13 @@ import * as fs from 'fs';
 import { deleteFolderRecursive } from './utils';
 import Thread from './thread';
 import { THREAD_FOLDER_PATH } from './environment';
-import { ProcessorData, Processor, ThreadNotFoundError, ThreadStatus } from './typing';
+import {
+  ProcessorData,
+  Processor,
+  ThreadNotFoundError,
+  ThreadStatus,
+  WorkerOptions,
+} from './typing';
 
 export class ThreadManager {
   #threads = new Map<string, Thread>();
@@ -12,10 +18,11 @@ export class ThreadManager {
     fs.mkdirSync(THREAD_FOLDER_PATH);
   }
 
-  create<Input extends ProcessorData = ProcessorData, Output extends ProcessorData = ProcessorData>(
-    processor: Processor<Input, Output>,
-  ): Thread {
-    const thread = new Thread<Input, Output>(processor);
+  create<
+    Input extends ProcessorData = ProcessorData,
+    Output extends ProcessorData = ProcessorData
+  >(processor: Processor<Input, Output>, workerOpts?: WorkerOptions): Thread {
+    const thread = new Thread<Input, Output>(processor, workerOpts);
     this.#threads.set(thread.id, thread);
     return thread;
   }
@@ -47,9 +54,13 @@ export class ThreadManager {
   runInThread<
     Input extends ProcessorData = ProcessorData,
     Output extends ProcessorData = ProcessorData
-  >(processor: Processor<Input, Output>, data: Input): Promise<Output> {
+  >(
+    processor: Processor<Input, Output>,
+    data: Input,
+    workerOpts?: WorkerOptions,
+  ): Promise<Output> {
     let response: Output;
-    const thread = this.create(processor);
+    const thread = this.create(processor, workerOpts);
     const onProcess = (data: Output): void => {
       response = data;
       thread.stop();
