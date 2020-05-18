@@ -3,7 +3,7 @@
   "description": "Typescript thread like implementation",
   "version": "0.0.2",
   "author": "Thibault Théologien <thibault.theologien@hotmail.fr>",
-  "license": "The unlicense",
+  "license": "UNLICENSE",
   "main": "dist/index.js",
   "types": "types/index.d.ts",
   "private": false,
