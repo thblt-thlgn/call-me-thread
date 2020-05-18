@@ -24,7 +24,8 @@ import ThreadManager from '@thblt-thlgn/call-me-thread';
 const tm = new ThreadManager();
 
 // Create a new thread
-const sumFunction = (params: { a: number; b: number }): number => params.a + params.b;
+const sumFunction = (params: { a: number; b: number }): number => 
+  params.a + params.b;
 
 tm.create(sumFunction)
   .subscribe(console.log)
@@ -41,9 +42,45 @@ tm.stop();
 tm.runInThread(sumFunction, { a: 132, b: 42 })
   .then(console.log)
   .catch(console.error);
+
+// Pass thread scoped data
+const workerData = {
+  callCounter: 0,
+};
+const counter = (params, workerData) => {
+  workerData.callCounter += 1;
+  return `Thread has been called ${workerData.callCounter} times`;
+};
+tm.create(counter, { workerData })
+  .subscribe(console.log)
+  .pushData({})
+  .pushData({})
+  .stop();
+
+// Use a library in your thread
+const libraries = [
+  {
+    name: "path",
+  },
+  {
+    name: "stream",
+    constName: "customName",
+  },
+];
+const libraryImport = (params, workerData, libraries) => {
+  // Do something with path library
+  libraries.path.doSomething()
+
+  // Do something with stream library
+  libraries.customName.doSomething()
+
+  return "done";
+};
+tm.runInThread(libraryImport, {}, { libraries })
+  .then(console.log);
 ```
 
-__NOTE:__ You can path data and libraries to import using the optionnal parameter on thread creation.
+__NOTE:__ You can pass data and libraries to import using the optionnal parameter on thread creation.
 
 ## Run tests
 
