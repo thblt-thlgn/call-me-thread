@@ -12,8 +12,12 @@ export class Thread<
   id = generateUUID();
   status: ThreadStatus = 'initialization';
   #worker: Worker | null = null;
-  #activeProcessingDataCount = 0;
   #isStopTriggered = false;
+  #messageQueue: Input[] = [];
+
+  get canBeStopped(): boolean {
+    return this.#messageQueue.length === 0 && this.status === 'waiting';
+  }
 
   constructor(processor: Processor<Input, Output>, opts?: WorkerOptions) {
     const filePath = this.createThreadFile(processor, opts?.libraries);
@@ -28,10 +32,14 @@ export class Thread<
     });
 
     this.#worker.on('message', () => {
-      this.#activeProcessingDataCount -= 1;
-      this.status = this.#activeProcessingDataCount === 0 ? 'waiting' : 'running';
+      if (this.#messageQueue.length > 0) {
+        this.#worker?.postMessage(this.#messageQueue[0]);
+        this.#messageQueue = this.#messageQueue.slice(1);
+      } else {
+        this.status = 'waiting';
+      }
 
-      if (this.#activeProcessingDataCount === 0 && this.#isStopTriggered) {
+      if (this.canBeStopped && this.#isStopTriggered) {
         this.#worker?.postMessage(STOP_MESSAGE);
       }
     });
@@ -72,7 +80,7 @@ export class Thread<
       });
     }
 
-    if (force || this.#activeProcessingDataCount === 0) {
+    if (force || this.canBeStopped) {
       this.#worker?.postMessage(STOP_MESSAGE);
     } else {
       this.#isStopTriggered = true;
@@ -81,9 +89,12 @@ export class Thread<
   }
 
   pushData(data: Input): Thread {
-    this.#worker?.postMessage(data);
-    this.#activeProcessingDataCount += 1;
-    this.status = this.#activeProcessingDataCount === 0 ? 'waiting' : 'running';
+    if (this.status === 'running') {
+      this.#messageQueue.push(data);
+    } else {
+      this.#worker?.postMessage(data);
+      this.status = 'running';
+    }
     return this;
   }
 }
