@@ -4,6 +4,7 @@ import { Worker } from 'worker_threads';
 import { generateUUID, generateImports, generateLibraries } from './utils';
 import { THREAD_FOLDER_PATH, BASE_THREAD, STOP_MESSAGE } from './environment';
 import { ThreadStatus, Processor, ProcessorData, WorkerOptions, Library } from './typing';
+import { Queue } from './queue';
 
 export class Thread<
   Input extends ProcessorData = ProcessorData,
@@ -13,14 +14,22 @@ export class Thread<
   status: ThreadStatus = 'initialization';
   #worker: Worker | null = null;
   #isStopTriggered = false;
-  #messageQueue: Input[] = [];
+  #messageQueue = new Queue<Input>((data) => {
+    this.status = 'running';
+    this.#worker?.postMessage(data);
+  });
 
   get canBeStopped(): boolean {
     return this.#messageQueue.length === 0 && this.status === 'waiting';
   }
 
+  get queueLength(): number {
+    return this.#messageQueue.length;
+  }
+
   constructor(processor: Processor<Input, Output>, opts?: WorkerOptions) {
     const filePath = this.createThreadFile(processor, opts?.libraries);
+
     this.#worker = new Worker(filePath, {
       workerData: opts?.workerData,
     });
@@ -32,12 +41,8 @@ export class Thread<
     });
 
     this.#worker.on('message', () => {
-      if (this.#messageQueue.length > 0) {
-        this.#worker?.postMessage(this.#messageQueue[0]);
-        this.#messageQueue = this.#messageQueue.slice(1);
-      } else {
-        this.status = 'waiting';
-      }
+      this.status = this.#messageQueue.length > 0 ? 'running' : 'waiting';
+      this.#messageQueue.resume();
 
       if (this.canBeStopped && this.#isStopTriggered) {
         this.#worker?.postMessage(STOP_MESSAGE);
@@ -89,12 +94,7 @@ export class Thread<
   }
 
   pushData(data: Input): Thread {
-    if (this.status === 'running') {
-      this.#messageQueue.push(data);
-    } else {
-      this.#worker?.postMessage(data);
-      this.status = 'running';
-    }
+    this.#messageQueue.push(data);
     return this;
   }
 }

@@ -53,13 +53,11 @@ export class Pool<
   }
 
   pushData(data: Input): Pool {
-    let index = Array.from(this.#threads).findIndex(
-      (thread) => thread.status === 'waiting',
+    const threads = Array.from(this.#threads).sort(
+      (a, b) => a.queueLength - b.queueLength,
     );
-    if (index === -1) {
-      index = Math.round(Math.random() * (this.#threads.size - 1));
-    }
-    const selectedThread = Array.from(this.#threads)[index];
+    const selectedThread =
+      threads.find((thread) => thread.status === 'waiting') || threads[0];
     selectedThread.pushData(data);
     return this;
   }
