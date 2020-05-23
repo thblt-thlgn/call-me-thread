@@ -87,4 +87,5 @@ export class ThreadManager {
   }
 }
 
-export default new ThreadManager();
+export const threadManager = new ThreadManager();
+export default threadManager;

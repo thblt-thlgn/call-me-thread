@@ -35,10 +35,10 @@ export const toCamelCase = (str: string): string =>
 export const generateImports = (libraries: Library[]): string =>
   libraries
     .map((lib) => {
-      const constName = lib.constName || toCamelCase(lib.name);
-      return `const ${constName} = require('${lib.name}');`;
+      const name = lib.name || toCamelCase(lib.path);
+      return `const ${name} = require('${lib.path}');`;
     })
     .join('\n');
 
 export const generateLibraries = (libraries: Library[]): string =>
-  `{ ${libraries.map((lib) => lib.constName || toCamelCase(lib.name)).join(', ')} }`;
+  `{ ${libraries.map((lib) => lib.name || toCamelCase(lib.path)).join(', ')} }`;
