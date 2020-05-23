@@ -1,1 +1,6 @@
-export type ThreadStatus = 'waiting' | 'running' | 'stopped' | 'initialization';
+export enum ThreadStatus {
+  waiting,
+  running,
+  stopped,
+  initialization,
+}

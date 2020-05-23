@@ -1,11 +1,25 @@
 import Thread from './thread';
-import { ProcessorData, Processor, WorkerOptions } from './typing';
+import {
+  ProcessorData,
+  Processor,
+  WorkerOptions,
+  StoppedPoolError,
+  ThreadStatus,
+} from './typing';
+import { generateUUID } from './utils';
+import threadManager from './thread-manager';
 
 export class Pool<
   Input extends ProcessorData = ProcessorData,
   Output extends ProcessorData = ProcessorData
 > {
+  id = generateUUID();
   #threads = new Set<Thread>();
+  #isStopTriggered = false;
+
+  get threads(): Set<Thread> {
+    return this.#threads;
+  }
 
   constructor(
     processor: Processor<Input, Output>,
@@ -16,14 +30,19 @@ export class Pool<
       const thread = new Thread<Input, Output>(processor, workerOpts);
       this.#threads.add(thread);
     }
+
+    threadManager.register(this);
   }
 
-  get threads(): Set<Thread> {
-    return this.#threads;
+  private checkIfActionCanBePerformed(): void {
+    if (this.#isStopTriggered) {
+      throw new StoppedPoolError();
+    }
   }
 
   subscribe(onMessage: (data: Output) => void): Pool {
-    Array.from(this.#threads).forEach((thread) => {
+    this.checkIfActionCanBePerformed();
+    this.#threads.forEach((thread) => {
       thread.subscribe(onMessage);
     });
 
@@ -31,7 +50,8 @@ export class Pool<
   }
 
   catch(onError: (err: Error) => void): Pool {
-    Array.from(this.#threads).forEach((thread) => {
+    this.checkIfActionCanBePerformed();
+    this.#threads.forEach((thread) => {
       thread.catch(onError);
     });
 
@@ -39,12 +59,15 @@ export class Pool<
   }
 
   stop(func?: Function, force?: boolean): Pool {
+    this.checkIfActionCanBePerformed();
+    this.#isStopTriggered = true;
     let stoppedCount = 0;
-    Array.from(this.#threads).forEach((thread) => {
+    this.#threads.forEach((thread) => {
       thread.stop(() => {
         stoppedCount += 1;
         if (func && stoppedCount === this.#threads.size) {
           func();
+          threadManager.unregister(this);
         }
       }, force);
     });
@@ -53,11 +76,12 @@ export class Pool<
   }
 
   pushData(data: Input): Pool {
+    this.checkIfActionCanBePerformed();
     const threads = Array.from(this.#threads).sort(
       (a, b) => a.queueLength - b.queueLength,
     );
     const selectedThread =
-      threads.find((thread) => thread.status === 'waiting') || threads[0];
+      threads.find((thread) => thread.status === ThreadStatus.waiting) || threads[0];
     selectedThread.pushData(data);
     return this;
   }
