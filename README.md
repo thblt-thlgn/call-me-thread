@@ -17,133 +17,224 @@ $ npm install @thblt-thlgn/call-me-thread
 $ yarn add @thblt-thlgn/call-me-thread
 ```
 
+## How does it work ?
+
+For each thread or pool you create, a JavaScript worker file is generated, and binded to the API.
+It means that this library has the same limitations than NodeJS workers.
+
+Have a look to the [worker API](https://nodejs.org/api/worker_threads.hthreadManagerl) for more details
+
 ## How to use ?
 
+### Processor function
+
+The processor function is the one passed to your threads or pools (it's basically the code you wanna run in a thread).
+As this function is copied into a generated javascript file, you cannot use variables from outside the processor function.
+Hopefully, [some options]() allow you to use external libraries, or worker scoped variables.
+
 ```ts
-import ThreadManager from '@thblt-thlgn/call-me-thread';
-const tm = new ThreadManager();
+/**
+ * @data Object - Data passed from thread.pushData or pool.pushData function
+ * @worker Object - Worker scoped data passed on thread or pool creation
+ * @libraries Object - Object containing the libraries passed on the thread or pool creation
+ */
+const processor = (data, workerData, libraries) => {
+  // use the workerData
+  workerData.calls += 1;
 
-// Create a new thread
-const sumFunction = (params: { a: number; b: number }): number => 
-  params.a + params.b;
+  // use a librarie
+  libraries.myLib.doSomething();
 
-const thread = tm.createThread(sumFunction)
-  .subscribe(console.log)
-  .catch(console.error);
-
-// Send data to the thread
-thread.pushData({ a: 1, b: 2 })
-  .pushData({ a: 4, b: 5 });
-
-// Stop the thread
-thread.stop(() => {
-  console.log('I will be called when all the data will be processed');
-});
-
-// Run as a single call
-tm.runInThread(sumFunction, { a: 132, b: 42 })
-  .then(console.log)
-  .catch(console.error);
-
-// Pass thread scoped data
-const workerData = {
-  callCounter: 0,
+  // do some stuff;
+  return data.value * 2;
 };
-const counter = (params, workerData) => {
-  workerData.callCounter += 1;
-  return `Thread has been called ${workerData.callCounter} times`;
-};
-tm.createThread(counter, { workerData })
-  .subscribe(console.log)
-  .pushData({})
-  .pushData({})
-  .stop();
-
-// Use a library in your thread
-const libraries = [
-  {
-    name: "path",
-  },
-  {
-    name: "stream",
-    constName: "customName",
-  },
-];
-const libraryImport = (params, workerData, libraries) => {
-  // Do something with path library
-  libraries.path.doSomething()
-
-  // Do something with stream library
-  libraries.customName.doSomething()
-
-  return "done";
-};
-tm.runInThread(libraryImport, {}, { libraries })
-  .then(console.log);
-
-// Create a pool
-tm.createPool(sumFunction, 4)
-  .subscribe(console.log)
-  .catch(console.error)
-  .pushData({ a: 1, b: 2 })
-  .pushData({ a: 43, b: 3 })
-  .pushData({ a: 123, b: 242 })
-  .pushData({ a: 32, b: 23 })
-  .pushData({ a: 11, b: 20 })
-  .stop(() => {
-    console.log('Completed')
-  });
 ```
 
-## Run tests
+### Threads
 
-```sh
-$ yarn test
+Run a processor function in a NodeJS worker
+
+```ts
+import { threadManager, Thread } from '@thblt-thlgn/call-me-thread';
+
+const threadOptions = {
+  workerData: {
+    calls: 0,
+  },
+  libraries: {
+    path: 'fs',
+    name: 'myLib';
+  }
+};
+
+// Threads can be created from the thread-manager
+const thread =  threadManager.createThread(processor, threadOptions);
+
+// Or directly using the class
+const thread = new Thread(processor, threadOptions);
+
+// You can subscribe to the processed data
+thread.subscribe(console.log);
+
+// Or catch the errors if any
+thread.catch(console.error);
+
+// You can push data to the thread as many time as you need
+// But please note that only primitive data can be pushed (no functions)
+thread.pushData({ value: Math.random() });
+
+// And the thread can be stopped when you are done with it
+thread.stop(() => {
+  console.log('I am printed when all the pushed data is processed by the worker')
+})
+
+// Or force the thread stop
+thread.stop(() => {
+  console.log('I am called before all the pushed data is processed by the worker')
+}, true)
+
+// Calls can be chained
+thread
+  .subscribe(console.log)
+  .catch(console.error)
+  .pushData({ value: Math.random() })
+  .pushData({ value: Math.random() })
+  .pushData({ value: Math.random() })
+  .stop();
+```
+
+Behind the hood, a message queue is implemented (using stream for better memory efficiency) for each thread
+
+### Pools
+
+Run a processor function in a pool of thread.
+
+```ts
+import { threadManager, Pool } from '@thblt-thlgn/call-me-thread';
+
+const poolOptions = {
+  workerData: {
+    calls: 0,
+  },
+  libraries: {
+    path: 'fs',
+    name: 'myLib';
+  }
+};
+
+// Pools can be created from the thread-manager
+// Here a pool of 4 threads is gonna be created
+const pool =  poolManager.createPool(processor, 4, poolOptions);
+
+// Or directly using the class
+// Here a pool of 2 threads is gonna be created
+const pool = new Pool(processor, 2, poolOptions);
+
+// You can subscribe to the processed data
+pool.subscribe(console.log);
+
+// Or catch the errors if any
+pool.catch(console.error);
+
+// You can push data to the pool as many time as you need
+// But please note that only primitive data can be pushed (no functions)
+pool.pushData({ value: Math.random() });
+
+// And the pool can be stopped when you are done with it
+pool.stop(() => {
+  console.log('I am printed when all my threads are stopped')
+})
+
+// Or force the pool stop
+pool.stop(() => {
+  console.log('Force stop is called on all my threads')
+}, true)
+
+// Calls can be chained
+pool
+  .subscribe(console.log)
+  .catch(console.error)
+  .pushData({ value: Math.random() })
+  .pushData({ value: Math.random() })
+  .pushData({ value: Math.random() })
+  .stop();
+```
+
+Behind the hood, the data will be sent to the threads with the smallest queue.
+
+### Single usage threads / promisified
+
+Sometimes, you just need to run a process in thread, but only once
+
+```ts
+import threadManager from '@thblt-thlgn/call-me-thread';
+
+threadManager
+  .runInThread(processor, { value: Math.random }, threadOptions)
+  .then(console.log)
+  .catch(console.error);
+```
+
+### Thread-manager
+
+This class is a singleton.
+It allows thread and pools creation, as well as storing them (useful for debugging purpose)
+
+```ts
+import threadManager from '@thblt-thlgn/call-me-thread';
+
+// Get all the active threads (as a Map)
+const threads = threadManager.threads;
+
+// Get all the active pools (as a Map)
+const pools = threadManager.pools;
+
+// Create a thread
+const thread = threadManager.createThread(processor, threadOptions);
+
+// Create a pool
+const pool = threadManager.createPool(processor, 4, threadOptions);
+
+// Create a single usage thread
+threadManager
+  .runInThread(processor, { value: Math.random }, threadOptions)
+  .then(console.log)
+  .catch(console.error);
 ```
 
 ## Example
 
+In this example, a pool is used to create some arrays with random values, and another one to sort those arrays.
+
 ```js
-const { ThreadManager } = require('@thblt-thlgn/call-me-thread');
+const threadManager = require('@thbl-thlgn/call-me-thread');
 const ARRAY_SIZE = 10000000;
 const THREADS = 4;
 
 const createArrays = ({ size, maxValue }) =>
   Array.from(new Array(size)).map(() => Math.round(Math.random() * maxValue));
 
-const sorter = ({ array }) => {
-  return array.sort((a, b) => a - b);
-};
+const sorter = ({ array }) => array.sort((a, b) => a - b);
 
-const tm = new ThreadManager();
-const arrays = [];
-const creationPool = tm
+const sortingPool = threadManager
+  .createPool(sorter, THREADS)
+  .subscribe(console.log)
+  .catch(console.error);
+
+const creationPool = threadManager
   .createPool(createArrays, THREADS)
   .subscribe((array) => {
-    arrays.push(array);
+    sortingPool.pushData({ array });
   })
   .catch(console.error);
-const sortingPool = tm.createPool(sorter, THREADS).catch(console.error);
 
 console.time('Time');
-creationPool
-  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
-  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
-  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
-  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
-  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
-  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
-  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
-  .pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE })
-  .stop(() => {
-    arrays.forEach((array) => {
-      sortingPool.pushData({ array });
-    });
-    sortingPool.stop(() => console.timeEnd('Time'));
-  });
+
+for (let i = 0; i < 8; i++) {
+  creationPool.pushData({ size: ARRAY_SIZE, maxValue: ARRAY_SIZE });
+}
+
+creationPool.stop(() => {
+  sortingPool.stop(() => console.timeEnd('Time'));
+});
 ```
-
-On my laptop, the result is `Time: 53.751s` with a pool of 8 threads, whereas a pool of 1 thread is `Time: 1:15.745 (m:ss.mmm)`
-
-## Limitations
-You cannot use data from outside the processor function scope
