@@ -30,7 +30,7 @@ Have a look to the [worker API](https://nodejs.org/api/worker_threads.hthreadMan
 
 The processor function is the one passed to your threads or pools (it's basically the code you wanna run in a thread).
 As this function is copied into a generated javascript file, you cannot use variables from outside the processor function.
-Hopefully, [some options]() allow you to use external libraries, or worker scoped variables.
+Hopefully, some options allow you to use external libraries, or worker scoped variables.
 
 ```ts
 /**
@@ -61,10 +61,10 @@ const threadOptions = {
   workerData: {
     calls: 0,
   },
-  libraries: {
+  libraries: [{
     path: 'fs',
     name: 'myLib';
-  }
+  }]
 };
 
 // Threads can be created from the thread-manager
@@ -116,10 +116,10 @@ const poolOptions = {
   workerData: {
     calls: 0,
   },
-  libraries: {
+  libraries: [{
     path: 'fs',
     name: 'myLib';
-  }
+  }]
 };
 
 // Pools can be created from the thread-manager
