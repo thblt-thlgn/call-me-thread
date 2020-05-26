@@ -12,7 +12,7 @@ import {
   Library,
   StoppedThreadError,
 } from './typing';
-import { Queue } from './queue';
+import Queue from './queue';
 
 export class Thread<
   Input extends ProcessorData = ProcessorData,
